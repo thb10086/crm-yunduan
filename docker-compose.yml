@@ -13,6 +13,8 @@ services:
       - AUTH_SECRET=crm-yunduan-secret-key-2024
       # 部署时修改为实际域名或IP
       - NEXTAUTH_URL=http://localhost:8080
+      # 信任代理主机（Docker部署必需）
+      - AUTH_TRUST_HOST=true
     restart: unless-stopped
 
 # 使用命名卷持久化数据
