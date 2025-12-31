@@ -41,9 +41,11 @@ export async function GET() {
   const cookieStore = await cookies()
   cookieStore.set('captcha', answer, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // 只有在 HTTPS 环境下才设置 secure
+    secure: process.env.NEXTAUTH_URL?.startsWith('https') ?? false,
+    sameSite: 'lax',
     maxAge: 300, // 5分钟有效
+    path: '/',
   })
 
   return new NextResponse(svg, {
