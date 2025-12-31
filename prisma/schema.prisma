@@ -1,0 +1,183 @@
+// CRM System Database Schema
+// 云端CRM系统 - Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户角色枚举
+enum Role {
+  ADMIN    // 超级管理员
+  MANAGER  // 销售经理
+  SALES    // 普通销售
+}
+
+// 客户状态枚举
+enum CustomerStatus {
+  POOL     // 公海池
+  ASSIGNED // 已分配
+}
+
+// 跟进方式枚举
+enum FollowUpType {
+  PHONE   // 电话
+  WECHAT  // 微信
+  VISIT   // 拜访
+  EMAIL   // 邮件
+  OTHER   // 其他
+}
+
+// 合同状态枚举
+enum ContractStatus {
+  EXECUTING  // 执行中
+  DONE       // 已结束
+  TERMINATED // 意外终止
+}
+
+// 部门表
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+}
+
+// 用户表
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  passwordHash String
+  name         String     // 显示名称
+  role         Role       @default(SALES)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  isActive     Boolean    @default(true)
+  lockedUntil  DateTime?  // 账号锁定截止时间
+  loginAttempts Int       @default(0) // 登录失败次数
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  // 关联
+  customers    Customer[] @relation("CustomerOwner")
+  followUps    FollowUp[]
+  systemLogs   SystemLog[]
+  claimRecords ClaimRecord[]
+}
+
+// 客户表
+model Customer {
+  id             String         @id @default(cuid())
+  name           String         // 公司名
+  contactPerson  String         // 联系人
+  phone          String         // 电话
+  email          String?        // 邮箱
+  address        String?        // 地址
+  remark         String?        // 备注
+  source         String?        // 客户来源
+  status         CustomerStatus @default(ASSIGNED)
+  ownerId        String?        // 负责人ID
+  owner          User?          @relation("CustomerOwner", fields: [ownerId], references: [id])
+  lastFollowUpAt DateTime?      // 最后跟进时间（用于公海回收判断）
+  returnReason   String?        // 退回公海原因
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // 关联
+  followUps      FollowUp[]
+  contracts      Contract[]
+  
+  @@index([phone])
+  @@index([status])
+  @@index([ownerId])
+}
+
+// 跟进记录表
+model FollowUp {
+  id              String       @id @default(cuid())
+  content         String       // 跟进内容
+  type            FollowUpType @default(PHONE)
+  nextFollowUpAt  DateTime?    // 下次跟进时间
+  customerId      String
+  customer        Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  createdAt       DateTime     @default(now())
+  
+  @@index([customerId])
+  @@index([nextFollowUpAt])
+}
+
+// 合同表
+model Contract {
+  id           String         @id @default(cuid())
+  serialNumber String         @unique // 合同编号 CTR-20240520-001
+  amount       Float          // 合同金额
+  signDate     DateTime       // 签约日期
+  status       ContractStatus @default(EXECUTING)
+  remark       String?        // 备注
+  customerId   String
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  // 关联
+  payments     Payment[]
+  
+  @@index([customerId])
+  @@index([status])
+}
+
+// 回款记录表
+model Payment {
+  id          String   @id @default(cuid())
+  amount      Float    // 回款金额
+  paymentDate DateTime // 回款日期
+  remark      String?  // 备注
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@index([contractId])
+}
+
+// 客户领取记录（用于限制每日领取数量）
+model ClaimRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  customerId String   // 领取的客户ID
+  claimedAt  DateTime @default(now())
+  
+  @@index([userId, claimedAt])
+}
+
+// 系统日志表
+model SystemLog {
+  id        String   @id @default(cuid())
+  action    String   // 操作类型
+  target    String?  // 操作对象
+  targetId  String?  // 操作对象ID
+  detail    String?  // 详细信息
+  ip        String?  // IP地址
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// 系统配置表
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
