@@ -21,22 +21,33 @@
 
 ## 快速开始
 
-### 1. 安装依赖
+### 方式一：Docker 部署（推荐，开箱即用）
 
 ```bash
-npm install
+# 克隆项目
+git clone https://github.com/your-repo/crm-yunduan.git
+cd crm-yunduan
+
+# 一键启动（自动初始化数据库和种子数据）
+docker-compose up -d --build
+
+# 查看日志
+docker-compose logs -f
 ```
 
-### 2. 初始化数据库
+启动后访问 http://localhost:8080
+
+### 方式二：本地开发
 
 ```bash
+# 1. 安装依赖
+npm install
+
+# 2. 初始化数据库
 npx prisma migrate dev
 npm run db:seed
-```
 
-### 3. 启动开发服务器
-
-```bash
+# 3. 启动开发服务器
 npm run dev
 ```
 

@@ -1,19 +1,20 @@
-version: '3.8'
-
 services:
   crm:
     build: .
     container_name: crm-yunduan
     ports:
       # 修改左边的端口号即可，格式：主机端口:容器端口
-      # 例如改成 8080:3000 表示通过 8080 端口访问
       - "8080:3000"
     volumes:
-      # 持久化数据库
-      - ./data:/app/prisma
+      # 持久化数据库文件
+      - crm-data:/app/prisma
     environment:
-      - DATABASE_URL=file:./dev.db
-      - AUTH_SECRET=your-production-secret-key-here
-      # 这里的端口要与上面的主机端口一致
+      - DATABASE_URL=file:./prisma/dev.db
+      - AUTH_SECRET=crm-yunduan-secret-key-2024
+      # 部署时修改为实际域名或IP
       - NEXTAUTH_URL=http://localhost:8080
     restart: unless-stopped
+
+# 使用命名卷持久化数据
+volumes:
+  crm-data:
